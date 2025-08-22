@@ -135,7 +135,7 @@ def create_sensevoice(samplerate: int, args) -> sherpa_onnx.OfflineRecognizer:
 
     if not os.path.exists(d):
         raise ValueError(f"asr: model not found {d}")
-
+    logger.info(f"asr: loading sensevoice model language from {args.asr_lang}")
     recognizer = sherpa_onnx.OfflineRecognizer.from_sense_voice(
         model=os.path.join(d, 'model.onnx'),
         tokens=os.path.join(d, 'tokens.txt'),
@@ -205,6 +205,7 @@ def create_fireredasr(samplerate: int, args) -> sherpa_onnx.OnlineRecognizer:
 
 def load_asr_engine(samplerate: int, args) -> sherpa_onnx.OnlineRecognizer:
     cache_engine = _asr_engines.get(args.asr_model)
+    logger.info(f"asr: loading model {args.asr_model}  with provider {args.asr_provider} and samplerate {samplerate}")
     if cache_engine:
         return cache_engine
     st = time.time()

@@ -5,3 +5,4 @@ uvicorn == 0.30.6
 scipy  == 1.13.1
 numpy == 1.26.4
 websockets == 13.0.1
+python-multipart == 0.0.20

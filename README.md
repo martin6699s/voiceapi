@@ -58,7 +58,54 @@ The server will return the transcription result in JSON format, with the followi
     // PCM 16bit, with samplerate
     ws.send(int16Array.buffer);
 ```
+
+
+## HTTP API
+### /httpasr 
+Send wav file to the server through HTTP API interface,   and the server will return the transcription result.
+
+http request param: 
+
+- `samplerate` can be set in the query string, default is 16000. 
+
+- `model`:   ASR  model name, default is sensevoice. 
+- `lang`:  ASR language, default is zh.
+- `file`:  wav file.
+
+```shell
+curl -X POST "http://localhost:8000/asr" ^
+  -F "file=@test.wav" ^
+  -F "samplerate=16000" ^
+  -F "model=sensevoice" ^
+  -F "lang=zh"
+```
+
+response:
+
+- success example:
+
+  ```
+  {
+    "success": true,
+    "text": "The text content that was identified"
+  }
+  ```
+
+  
+
+- failure example:
+
+  ```
+  {
+    "success": false,
+    "error": "error message"
+  }
+  ```
+
+  
+
 ### /tts
+
 Send text to the server, and the server will return the synthesized audio data.
 - `samplerate` can be set in the query string, default is 16000. 
 - `sid` is the Speaker ID, default is 0.
@@ -117,7 +164,10 @@ curl -X POST "http://localhost:8000/tts" \
          }' -o helloworkd.wav
 ```
 
+
+
 ## Download models
+
 All models are stored in the `models` directory
 Only download the models you need. default models are:
 - asr models: `sherpa-onnx-streaming-zipformer-bilingual-zh-en-2023-02-20`(Bilingual, Chinese + English). Streaming
