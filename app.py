@@ -51,14 +51,42 @@ async def asr_recognize(
         if len(audio_bytes) < 3200:
             return {"success": False, "error": "audio too short or empty"}
         
-        logger.info(f"[httpasr] WAV文件并解码为PCM")
+        logger.info(f"[httpasr] 处理WAV文件并进行音频增强")
         
-        # 检查是否为WAV文件并获取原始16bit PCM bytes
         import io
         import wave
-        pcm_bytes = None
+        import subprocess
+
         try:
-            with wave.open(io.BytesIO(audio_bytes), 'rb') as wf:
+            # 创建命令行，直接从内存输入输出
+            ffmpeg_cmd = [
+                'ffmpeg', '-y',
+                '-f', 'wav',  # 指定输入格式为wav
+                '-i', 'pipe:0',  # 从stdin读取输入
+                '-af', 'loudnorm,afftdn=nr=15:nf=-20:tn=0:bn=0',  # 音频滤镜
+                '-ar', str(samplerate),  # 设置采样率
+                '-ac', '1',  # 设置为单声道
+                '-f', 'wav',  # 设置输出格式为wav
+                'pipe:1'  # 输出到stdout
+            ]
+            
+            # 执行FFmpeg命令
+            process = subprocess.Popen(
+                ffmpeg_cmd,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE
+            )
+            
+            # 发送音频数据到FFmpeg并获取处理后的数据
+            stdout, stderr = process.communicate(input=audio_bytes)
+            
+            if process.returncode != 0:
+                logger.error(f"FFmpeg处理失败: {stderr.decode()}")
+                return {"success": False, "error": "音频处理失败"}
+            
+            # 从处理后的WAV数据中提取PCM
+            with wave.open(io.BytesIO(stdout), 'rb') as wf:
                 if wf.getnchannels() != 1:
                     return {"success": False, "error": "wav must be mono (1 channel)"}
                 if wf.getsampwidth() != 2:
@@ -66,9 +94,13 @@ async def asr_recognize(
                 if wf.getframerate() != samplerate:
                     return {"success": False, "error": f"wav samplerate must be {samplerate}"}
                 pcm_bytes = wf.readframes(wf.getnframes())
+                
         except Exception as e:
-            logger.warning(f"Not a valid wav file, treat upload as raw PCM bytes: {e}")
-            pcm_bytes = audio_bytes
+            logger.error(f"音频处理失败: {str(e)}")
+            return {"success": False, "error": f"音频处理失败: {str(e)}"}
+            
+        if not pcm_bytes:
+            return {"success": False, "error": "音频处理失败,未获得PCM数据"}
 
         if not pcm_bytes or len(pcm_bytes) < 4:
             return {"success": False, "error": "audio data empty or too short"}
